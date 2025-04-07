@@ -14,7 +14,9 @@ if __name__ == '__main__':
     Personagem.inicio()
 
     # Improvisação antes da atribuição da lógica de itens
-    espada_alada = "Espada Alada"
+    espada_alada = { "Nome": "Espada Alada", "Descricao": "Uma espada muito bela bla bla bla", "Efeito": "+25% de Ataque" }
+
+
 
     # Criando dois objetos da classe Monstro
     dragao = Monstro('Dragão', hp_max=50, hp_atual=50, atk=10, dfs=6, spd=4, level=10)
@@ -24,7 +26,7 @@ if __name__ == '__main__':
     torre_do_poder = Torre(nome= 'torre do poder',monstro = dragao, capanga = esqueleto, recompensa= espada_alada)
 
     # Criando um objeto da classe Personagem
-    jg = Personagem('jg', 20, 20, 4, 4, 4, 0, 20, 1)
+    jg = Personagem('jg', [], 20, 20, 4, 4, 4, 0, 20, 1)
 
 
 

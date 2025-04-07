@@ -11,6 +11,7 @@ def criar_tabelas(): # Cria as tabelas no banco de dados
         conn.execute('''
             CREATE TABLE IF NOT EXISTS jogadores (
                 nome TEXT PRIMARY KEY,
+                mochila TEXT,
                 hp_max INTEGER,
                 hp_atual INTEGER,
                 atk INTEGER,

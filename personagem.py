@@ -1,10 +1,12 @@
 import sqlite3 as sq
+import json
 from database import conectar_db
 from glb import lista_torres, lista_personagens
 
 class Personagem:
-    def __init__(self, nome, hp_max, hp_atual, atk, dfs, spd, exp, exp_bar, level):
+    def __init__(self, nome, mochila, hp_max, hp_atual, atk, dfs, spd, exp, exp_bar, level):
         self.nome = nome
+        self.mochila = mochila if mochila is not None else []
         self.hp_max = hp_max
         self.hp_atual = hp_atual
         self.atk = atk
@@ -27,9 +29,9 @@ class Personagem:
         if type(self) is Personagem: # verifica se a instância atual não é de uma subclasse (como Monstro)
             with self.conectar_db() as conn:
                 conn.execute('''
-                    INSERT OR REPLACE INTO jogadores (nome, hp_max, hp_atual, atk, dfs, spd, exp, exp_bar, level)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (self.nome, self.hp_max, self.hp_atual, self.atk, self.dfs, self.spd, self.exp, self.exp_bar, self.level)) # se já existir um registro com o mesmo nome, ele será atualizado com os novos valores
+                    INSERT OR REPLACE INTO jogadores (nome, mochila, hp_max, hp_atual, atk, dfs, spd, exp, exp_bar, level)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (self.nome, json.dumps(self.mochila), self.hp_max, self.hp_atual, self.atk, self.dfs, self.spd, self.exp, self.exp_bar, self.level)) # se já existir um registro com o mesmo nome, ele será atualizado com os novos valores
 
 
     def carregar_do_db(self, nome):
@@ -37,17 +39,44 @@ class Personagem:
             cursor = conn.execute('SELECT * FROM jogadores WHERE nome = ?', (nome,))
             row = cursor.fetchone() # obtem uma tupla com os dados do jogador.
             if row: # se row é diferente de None
-                self.hp_max, self.hp_atual, self.atk, self.dfs, self.spd, self.exp, self.exp_bar, self.level = row[1:] # atribui os valores da linha obtida, aos atributos correspondentes do objeto (self)
+                self.mochila = json.loads(row[1]) if row[1] else []  # Carrega a mochila como uma lista a partir da string JSON
+                self.hp_max, self.hp_atual, self.atk, self.dfs, self.spd, self.exp, self.exp_bar, self.level = row[2:] # atribui os valores da linha obtida, aos atributos correspondentes do objeto (self)
                 # está sendo feito um fatiamento acima, selecionando todos os elementos a partir do índice 1 até o final da tupla.
 
 
     @classmethod # método de classe que carrega todos os personagens do db
     def carregar_personagens_do_db(cls):
         with cls.conectar_db() as conn:
-            cursor = conn.execute('SELECT * FROM jogadores')
+            cursor = conn.execute('SELECT nome, mochila, hp_max, hp_atual, atk, dfs, spd, exp, exp_bar, level FROM jogadores')
             for row in cursor.fetchall(): # Cada row será uma tupla contendo os dados de um jogador
-                nome, hp_max, hp_atual, atk, dfs, spd, exp, exp_bar, level = row # é um desempacotamento
-                personagem = cls(nome, hp_max, hp_atual, atk, dfs, spd, exp, exp_bar, level) # cria uma instancia
+                nome, mochila, hp_max, hp_atual, atk, dfs, spd, exp, exp_bar, level = row # é um desempacotamento
+
+                # Deserializa a mochila de JSON para um objeto Python (lista de dicionários)
+                mochila = json.loads(mochila) if mochila else []  # Se mochila for None ou uma string vazia, atribui uma lista vazia
+
+                personagem = cls(nome, mochila, hp_max, hp_atual, atk, dfs, spd, exp, exp_bar, level) # cria uma instancia
+
+
+    # Verifica se o item já existe na mochila
+    def item_existe(self, novo_item):
+        return any(item['Nome'] == novo_item['Nome'] for item in self.mochila)
+
+
+    # Adiciona um novo item à mochila se ele não existir
+    def adicionar_item(self, novo_item):
+        if not self.item_existe(novo_item):
+            if isinstance(novo_item, dict):  # Verifica se item é um dicionário
+                self.mochila.append(novo_item)
+                self.salvar_no_db()
+            else:
+                print(f'Item não pode ser adicionado à mochila: {novo_item}')
+        else:
+            print(f"Item {novo_item['Nome']} já está na mochila.")
+
+
+    def visualizar_mochila(self):
+        for item in self.mochila:
+            print(f"Nome: {item['Nome']}, Descrição: {item['Descrição']}, Efeito: {item['Efeito']}")
 
 
     # Faz uma verificação de level up, para evitar repetição do próprio método level_up
@@ -89,6 +118,11 @@ class Personagem:
 
     # Executa a lǵgica de uma luta
     def lutar(self, inimigo):
+        atk_puro = self.atk
+        for item in self.mochila:
+            if item['Nome'] == 'Espada Alada':
+                self.atk = atk_puro * 1.25
+
         if self.hp_atual == 0: # Verifica se você está apto para luta
             print('Você não possui HP suficiente, visite o médico')
             return
@@ -111,7 +145,8 @@ class Personagem:
         
         # Lógica para caso de derrota
         else:
-            print(f'Você foi derrotado por {inimigo.nome}')
+            print(f'Você foi derrotado por {inimigo}')
+        self.atk = atk_puro
         self.salvar_no_db()
         inimigo.salvar_no_db()
 
@@ -159,19 +194,14 @@ class Personagem:
 
         if torre_escolhida: # Verifica se a torre escolhida existe
             # Lógica da luta na torre
-            try:
                 self.lutar(torre.capanga) # Lutar contra o capanga
                 if self.hp_atual > 0:
                     self.lutar(torre.monstro)
                     if self.hp_atual > 0:
-                        print(f'Parabéns!!! Você venceu a {torre.nome}')
-                    else:
-                        print(f'Você foi derrotado por {torre.monstro}')
-                else:
-                    print(f'Você foi derrotado por {torre.capanga}')
+                        print(f"Parabéns!!! Você venceu a {torre.nome} e ganhou a {torre.recompensa['Nome']}")
+                        self.adicionar_item(torre.recompensa)
 
-            #Recuperando o HP dos habitantes da torre
-            finally:
+            # Recuperando o HP dos habitantes da torre
                 torre.monstro.hp_atual = torre.monstro.hp_max
                 torre.capanga.hp_atual = torre.capanga.hp_max
         else:

@@ -4,11 +4,14 @@ from personagem import Personagem
 
 class Monstro(Personagem): # A classe Monstro está herdando os atributos e métodos da classe Personagem
     def __init__(self, nome, hp_max, hp_atual, atk, dfs, spd, level):
-        super().__init__(nome, hp_max, hp_atual, atk, dfs, spd, 0, 0, level) # exp e exp_bar são atribuídos como 0 pois não são relevantes para monstros
+        super().__init__(nome, [], hp_max, hp_atual, atk, dfs, spd, 0, 0, level) # exp e exp_bar são atribuídos como 0 pois não são relevantes para monstros
         
         # Verifica se o monstro já existe no banco de dados antes de salvar
         if not self.existe_no_db():
             self.salvar_no_db()
+
+    def __str__(self):
+        return self.nome
 
 
     def existe_no_db(self):

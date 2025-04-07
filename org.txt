@@ -1,5 +1,0 @@
-- Preciso melhorar os textos nos prints
-
-- implementar lógica de itens
-
-- tratamento de erros durante as opções de escolha (try)

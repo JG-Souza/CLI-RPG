@@ -1,4 +1,5 @@
 from database import conectar_db
+import json
 from monstro import Monstro
 from glb import lista_torres
 
@@ -27,7 +28,7 @@ class Torre:
         with conectar_db() as conn:
             conn.execute('''
                 INSERT INTO torres (nome, monstro_nome, capanga_nome, recompensa) VALUES (?, ?, ?, ?)
-            ''', (self.nome, self.monstro.nome, self.capanga.nome, self.recompensa))
+            ''', (self.nome, self.monstro.nome, self.capanga.nome, json.dumps(self.recompensa))) # Converte o dicionário para JSON
 
 
     @classmethod # método de classe que carrega todas as torres do banco de dados
@@ -36,7 +37,8 @@ class Torre:
             cursor = conn.execute('SELECT nome, monstro_nome, capanga_nome, recompensa FROM torres')
             # Uma operação de desempacotamento será executada.
             for row in cursor.fetchall(): # cada row receberá uma tupla com os valores de cada coluna especificada na consulta
-                nome, monstro_nome, capanga_nome, recompensa = row # cada variável receberá o valor correspondente na tupla row, na mesma ordem
+                nome, monstro_nome, capanga_nome, recompensa_json = row # cada variável receberá o valor correspondente na tupla row, na mesma ordem
+                recompensa = json.loads(recompensa_json)
                 
                 # Busca o monstro e capanga pelos nomes armazenados
                 monstro = cls.buscar_monstro(monstro_nome)
